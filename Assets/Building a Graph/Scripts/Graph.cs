@@ -1,4 +1,5 @@
 using System;
+using Building_a_Graph.Scripts;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -8,6 +9,8 @@ public class Graph : MonoBehaviour
    [SerializeField, Range(10,1000)] public int Resolution = 10;
    [SerializeField] public Transform[] Points;
    [SerializeField, Range(0,1)] public float TimeScale;
+
+   [SerializeField, Range(0, 1)] public int Function;
    
    private void Start()
    {
@@ -38,8 +41,9 @@ public class Graph : MonoBehaviour
        foreach (var point in Points)
        {
            var position = point.localPosition;
-           position.y =   Mathf.Sin(Mathf.PI * 2  * (position.x + time * TimeScale));
-           position.y *= position.y;
+
+           position.y = Function == 1 ? FunctionLibrary.MultiWave(position.x, time * TimeScale) : FunctionLibrary.Wave(position.x, time * TimeScale);
+          
            point.localPosition = position;
        }
    }

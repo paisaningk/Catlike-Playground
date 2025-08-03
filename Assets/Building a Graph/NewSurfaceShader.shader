@@ -36,8 +36,8 @@ Shader "URP/DebugWorldPosBasic"
 
             half4 frag(Varyings i) : SV_Target
             {
-                half2 color = i.worldPos.xy * 0.5 + 0.5;
-                return half4(color, 0.0, 1.0);
+                half3 color = i.worldPos * 0.5 + 0.5;
+                return half4(color, 1.0);
             }
 
             ENDHLSL

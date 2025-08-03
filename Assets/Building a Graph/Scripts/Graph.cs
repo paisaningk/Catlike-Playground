@@ -10,7 +10,7 @@ public class Graph : MonoBehaviour
     [SerializeField] public Transform[] Points;
     [SerializeField, Range(0, 1)] public float TimeScale;
 
-    [SerializeField, Range(0, 2)] public int Function;
+    [SerializeField] FunctionLibrary.FunctionName Function;
 
     private void Start()
     {
@@ -19,12 +19,19 @@ public class Graph : MonoBehaviour
         var position = Vector3.zero;
         var scale = Vector3.one * step;
 
-        Points = new Transform[Resolution];
+        Points = new Transform[Resolution * Resolution];
 
-        for (var i = 0; i < Points.Length; i++)
+        for (int i = 0, x = 0, z = 0; i < Points.Length; i++, x++) 
         {
+            if (x == Resolution)
+            {
+                x = 0;
+                z += 1;
+            }
+            
             // - 1 เพราะว่าเราอยากให้มันเป็นใน -1 ถึง 1
-            position.x = (i + 0.5f) * step - 1f;
+            position.x = (x + 0.5f) * step - 1f;
+            position.z = (z + 0.5f) * step - 1f;
 
             var point = Instantiate(PointPrefab, transform);
 
@@ -37,23 +44,14 @@ public class Graph : MonoBehaviour
 
     private void Update()
     {
+        FunctionLibrary.Function f = FunctionLibrary.GetFunction(Function);
+        
         var time = Time.time;
         foreach (var point in Points)
         {
             var position = point.localPosition;
 
-            if (Function == 0)
-            {
-                position.y = FunctionLibrary.Wave(position.x, time * TimeScale);
-            }
-            else if (Function == 1)
-            {
-                position.y = FunctionLibrary.MultiWave(position.x, time * TimeScale);
-            }
-            else
-            {
-                position.y = FunctionLibrary.Ripple(position.x, time * TimeScale);
-            }
+            position.y = f(position.x, position.z, time * TimeScale);
 
             point.localPosition = position;
         }

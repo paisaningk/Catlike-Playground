@@ -16,29 +16,17 @@ public class Graph : MonoBehaviour
     {
         //แบ่งช่วง −1 ถึง 1 ออกเป็นส่วนย่อย ๆ ให้เหมาะกับการวางวัตถุลายชิ้นเรียงกันแบบพอดีเป๊ะ
         var step = 2f / Resolution;
-        var position = Vector3.zero;
         var scale = Vector3.one * step;
 
         Points = new Transform[Resolution * Resolution];
 
-        for (int i = 0, x = 0, z = 0; i < Points.Length; i++, x++) 
+        for (var i = 0; i < Points.Length; i++) 
         {
-            if (x == Resolution)
-            {
-                x = 0;
-                z += 1;
-            }
-            
-            // - 1 เพราะว่าเราอยากให้มันเป็นใน -1 ถึง 1
-            position.x = (x + 0.5f) * step - 1f;
-            position.z = (z + 0.5f) * step - 1f;
-
             var point = Instantiate(PointPrefab, transform);
 
-            point.localPosition = position;
-            point.localScale = scale;
-
             Points[i] = point;
+            point.localScale = scale;
+            point.SetParent(transform, false);
         }
     }
 
@@ -47,13 +35,25 @@ public class Graph : MonoBehaviour
         FunctionLibrary.Function f = FunctionLibrary.GetFunction(Function);
         
         var time = Time.time;
-        foreach (var point in Points)
+        var step = 2f / Resolution;
+
+        // - 1 เพราะว่าเราอยากให้มันเป็นใน -1 ถึง 1
+        // จะใช้ (z + 0.5f) * step - 1f;
+
+        // setup v for before the start of the loop
+        var v = 0.5f * step - 1f;
+        for (int i = 0, x = 0, z = 0; i < Points.Length; i++, x++)
         {
-            var position = point.localPosition;
+            if (x == Resolution)
+            {
+                x = 0;
+                z += 1;
+                v = (z + 0.5f) * step - 1f;
+            }
 
-            position.y = f(position.x, position.z, time * TimeScale);
+            float u = (x + 0.5f) * step - 1f;
 
-            point.localPosition = position;
+            Points[i].localPosition = f(u, v, time);
         }
     }
 }

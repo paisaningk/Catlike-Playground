@@ -1,15 +1,16 @@
 ﻿using System;
+using UnityEngine;
 using static UnityEngine.Mathf;
 
 namespace Building_a_Graph.Scripts
 {
     public static class FunctionLibrary
     {
-        public delegate float Function(float x, float z, float t);
+        public delegate Vector3 Function(float u, float v, float t);
 
-        public enum FunctionName { Wave, MultiWave, Ripple }
+        public enum FunctionName { Wave, MultiWave, Ripple, Sphere }
 
-        private static readonly Function[] Functions = { Wave, MultiWave, Ripple };
+        private static readonly Function[] Functions = { Wave, MultiWave, Ripple, Sphere };
 
         public static Function GetFunction(int index)
         {
@@ -21,23 +22,46 @@ namespace Building_a_Graph.Scripts
             return Functions[(int)name];
         }
 
-        public static float Wave(float x, float z, float time)
+        public static Vector3 Wave(float u, float v, float t)
         {
-            return Sin(PI * (x + time));
+            Vector3 p;
+            p.x = u;
+            p.y = Sin(PI * (u + v + t));
+            p.z = v;
+            return p;
         }
 
-        public static float MultiWave(float x, float z, float t)
+        public static Vector3 MultiWave(float u, float v, float t)
         {
-            var y = Sin(PI * (x + 0.5f * t));
-            y += 0.5f * Sin(2f * PI * (x + t));
-            return y * (2f / 3f);
+            Vector3 p;
+            p.x = u;
+            p.y = Sin(PI * (u + 0.5f * t));
+            p.y += 0.5f * Sin(2f * PI * (v + t));
+            p.y += Sin(PI * (u + v + 0.25f * t));
+            p.y *= 1f / 2.5f;
+            p.z = v;
+            return p;
         }
 
-        public static float Ripple(float x, float z, float t)
+        public static Vector3 Ripple(float u, float v, float t)
         {
-            var d = Abs(x);
-            var y = Sin(PI * (4f * d - t));
-            return y / (1f + 10f * d);
+            var d = Sqrt(u * u + v * v);
+            Vector3 p;
+            p.x = u;
+            p.y = Sin(PI * (4f * d - t));
+            p.y /= 1f + 10f * d;
+            p.z = v;
+            return p;
+        }
+
+        public static Vector3 Sphere(float u, float v, float t)
+        {
+            var r = Cos(0.5f * PI * v);
+            Vector3 p;
+            p.x = r * Sin(PI * u);
+            p.y = Sin(PI * 0.5f * v);
+            p.z = r * Cos(PI * u);
+            return p;
         }
     }
 }

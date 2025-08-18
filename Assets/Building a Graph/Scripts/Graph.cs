@@ -32,7 +32,7 @@ public class Graph : MonoBehaviour
 
     private void Update()
     {
-        FunctionLibrary.Function f = FunctionLibrary.GetFunction(Function);
+        var f = FunctionLibrary.GetFunction(Function);
         
         var time = Time.time;
         var step = 2f / Resolution;

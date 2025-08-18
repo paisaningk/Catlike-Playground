@@ -8,9 +8,9 @@ namespace Building_a_Graph.Scripts
     {
         public delegate Vector3 Function(float u, float v, float t);
 
-        public enum FunctionName { Wave, MultiWave, Ripple, Sphere }
+        public enum FunctionName { Wave, MultiWave, Ripple, Sphere, Torus }
 
-        private static readonly Function[] Functions = { Wave, MultiWave, Ripple, Sphere };
+        private static readonly Function[] Functions = { Wave, MultiWave, Ripple, Sphere, Torus };
 
         public static Function GetFunction(int index)
         {
@@ -56,11 +56,24 @@ namespace Building_a_Graph.Scripts
 
         public static Vector3 Sphere(float u, float v, float t)
         {
-            var r = Cos(0.5f * PI * v);
+            float r = 0.9f + 0.1f * Sin(PI * (6f * u + 4f * v + t));
+            float s = r * Cos(0.5f * PI * v);
             Vector3 p;
-            p.x = r * Sin(PI * u);
-            p.y = Sin(PI * 0.5f * v);
-            p.z = r * Cos(PI * u);
+            p.x = s * Sin(PI * u);
+            p.y = r * Sin(0.5f * PI * v);
+            p.z = s * Cos(PI * u);
+            return p;
+        }
+
+        public static Vector3 Torus(float u, float v, float t)
+        {
+            float r1 = 0.7f + 0.1f * Sin(PI * (6f * u + 0.5f * t));
+            float r2 = 0.15f + 0.05f * Sin(PI * (8f * u + 4f * v + 2f * t));
+            float s = r1 + r2 * Cos(PI * v);
+            Vector3 p;
+            p.x = s * Sin(PI * u);
+            p.y = r2 * Sin(PI * v);
+            p.z = s * Cos(PI * u);
             return p;
         }
     }

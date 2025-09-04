@@ -8,7 +8,7 @@ public enum TransitionMode { Cycle, Random }
 public class Graph : MonoBehaviour
 {
     [SerializeField] public Transform PointPrefab;
-    [SerializeField, Range(10, 1000)] public int Resolution = 10;
+    [SerializeField, Range(10, 200)] public int Resolution = 10;
     [SerializeField] public Transform[] Points;
     [SerializeField, Range(0, 1)] public float TimeScale;
 

@@ -1,0 +1,45 @@
+#pragma kernel function_kernel
+#define PI 3.14159265358979323846
+
+RWStructuredBuffer<float3> _Positions;
+uint _Resolution;
+float _Step, _Time;
+
+
+float2 GetUV (uint3 id)
+{
+    return (id.xy + 0.5) * _Step - 1.0;
+}
+
+float3 Wave(float u, float v, float t)
+{
+    float3 p;
+    p.x = u;
+    p.y = sin(PI * (u + v + t));
+    p.z = v;
+    return p;
+}
+
+//มันคือการเรียงข้อมูลแบบ
+// |   y\x | 0  | 1  | 2  | 3  | 4  |
+// | ----: | -- | -- | -- | -- | -- |
+// | **0** | 0  | 1  | 2  | 3  | 4  |
+// | **1** | 5  | 6  | 7  | 8  | 9  |
+// | **2** | 10 | 11 | 12 | 13 | 14 |
+// มันจะทำเป็น 1 + 0 & 5 เพราะเรามีทั้งหมด 5
+// พอ y เป็น 1 ก็จะเป็น 1 + 1 * 5 = 6
+void SetPosition (uint3 id, float3 position)
+{
+    if (id.x < _Resolution && id.y < _Resolution)
+    {
+        _Positions[id.x + id.y * _Resolution] = position;
+    }
+}
+
+// threads คือการบอกว่าแต่ละ x y z ใช้กี่ threads
+[numthreads(8, 8, 1)]
+void function_kernel(uint3 id : SV_DispatchThreadID)
+{
+    float2 uv = GetUV(id);
+    SetPosition(id, Wave(uv.x, uv.y, _Time));
+}

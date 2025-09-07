@@ -6,6 +6,9 @@ using UnityEngine.Serialization;
 public class GPUGraph : MonoBehaviour
 {
     [SerializeField] private ComputeShader computeShader;
+    [SerializeField] private Material material;
+    [SerializeField] private Mesh mesh;
+    
     [SerializeField, Range(10, 200)] public int Resolution = 10;
     [SerializeField, Range(0, 1)] public float TimeScale;
 
@@ -65,6 +68,9 @@ public class GPUGraph : MonoBehaviour
 
     private void UpdateFunctionOnGPU () 
     {
+        var bounds = new Bounds(Vector3.zero, Vector3.one * (2f + 2f / Resolution));
+        Graphics.DrawMeshInstancedProcedural(mesh, 0, material, bounds, positionsBuffer.count);
+        
         var step = 2f / Resolution;
         computeShader.SetInt(PositionsId, Resolution);
         computeShader.SetFloat(StepId, step);

@@ -1,95 +1,117 @@
-using System;
 using Building_a_Graph.Scripts;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class GPUGraph : MonoBehaviour
 {
-    [SerializeField] private ComputeShader computeShader;
-    [SerializeField] private Material material;
-    [SerializeField] private Mesh mesh;
-    
-    [SerializeField, Range(10, 200)] public int Resolution = 10;
-    [SerializeField, Range(0, 1)] public float TimeScale;
 
-    [SerializeField] FunctionLibrary.FunctionName Function;
-    [SerializeField] private TransitionMode transitionMode;
-    [SerializeField, Min(0f)] private float functionDuration = 1f;
-    [SerializeField, Min(0f)] private float transitionDuration = 1f;
+	const int maxResolution = 1000;
 
-    private static readonly int
-        PositionsId = Shader.PropertyToID("_Positions"),
-        ResolutionId = Shader.PropertyToID("_Resolution"),
-        StepId = Shader.PropertyToID("_Step"),
-        TimeId = Shader.PropertyToID("_Time");
-    
-    private float duration;
-    private bool transitioning;
+	static readonly int
+		positionsId = Shader.PropertyToID("_Positions"),
+		resolutionId = Shader.PropertyToID("_Resolution"),
+		stepId = Shader.PropertyToID("_Step"),
+		timeId = Shader.PropertyToID("_Time"),
+		transitionProgressId = Shader.PropertyToID("_TransitionProgress");
 
-    private FunctionLibrary.FunctionName transitionFunction;
+	[SerializeField]
+	ComputeShader computeShader;
 
-    private ComputeBuffer positionsBuffer;
+	[SerializeField]
+	Material material;
 
-    private void OnEnable() 
-    {
-        // ราจะเก็บตำแหน่งแบบ 3 มิติ = float3 / Vector3 → มี 3 ค่า float
-        // float หนึ่งตัวคือ 32 บิต = 4 ไบต์
-        // ดังนั้นขนาดต่อหนึ่งตำแหน่ง = 3 * 4 = 12 ไบต์
-        positionsBuffer = new ComputeBuffer(Resolution * Resolution, 3 * 4);
-    }
+	[SerializeField]
+	Mesh mesh;
 
-    private void OnDisable () 
-    {
-        positionsBuffer.Release();
-        positionsBuffer = null;
-    }
-    
-    private void Update()
-    {
-        UpdateFunctionOnGPU();
-        
-        // duration += Time.deltaTime;
-        // if (transitioning)
-        // {
-        //     if (duration >= transitionDuration)
-        //     {
-        //         duration -= transitionDuration;
-        //         transitioning = false;
-        //     }
-        // }
-        // else if (duration >= functionDuration)
-        // {
-        //     duration -= functionDuration;
-        //     transitioning = true;
-        //     transitionFunction = Function;
-        //     PickNextFunction();
-        // }
-    }
+	[SerializeField, Range(10, maxResolution)]
+	int resolution = 10;
 
-    private void UpdateFunctionOnGPU () 
-    {
-        var bounds = new Bounds(Vector3.zero, Vector3.one * (2f + 2f / Resolution));
-        Graphics.DrawMeshInstancedProcedural(mesh, 0, material, bounds, positionsBuffer.count);
-        
-        var step = 2f / Resolution;
-        computeShader.SetInt(PositionsId, Resolution);
-        computeShader.SetFloat(StepId, step);
-        computeShader.SetFloat(TimeId, Time.time);
-        
-        computeShader.SetBuffer(0, PositionsId, positionsBuffer);
-        
-        var groups = Mathf.CeilToInt(Resolution / 8f);
-        computeShader.Dispatch(0, groups, groups, 1);
-        
-        // เราส่ง int ที่เป็นค่าบวกก็จะแปลกเป็น uint
-        // ได้เพราะ uint คือค่า int ที่เป็นบวก
-    }
+	[SerializeField]
+	FunctionLibrary.FunctionName function;
 
-    private void PickNextFunction ()
-    {
-        Function = transitionMode == TransitionMode.Cycle ?
-            FunctionLibrary.GetNextFunctionName(Function) :
-            FunctionLibrary.GetRandomFunctionNameOtherThan(Function);
-    }
-    
+	public enum TransitionMode { Cycle, Random }
+
+	[SerializeField]
+	TransitionMode transitionMode;
+
+	[SerializeField, Min(0f)]
+	float functionDuration = 1f, transitionDuration = 1f;
+
+	float duration;
+
+	bool transitioning;
+
+	FunctionLibrary.FunctionName transitionFunction;
+
+	ComputeBuffer positionsBuffer;
+
+	void OnEnable()
+	{
+		positionsBuffer = new ComputeBuffer(maxResolution * maxResolution, 3 * 4);
+	}
+
+	void OnDisable()
+	{
+		positionsBuffer.Release();
+		positionsBuffer = null;
+	}
+
+	void Update()
+	{
+		duration += Time.deltaTime;
+		if (transitioning)
+		{
+			if (duration >= transitionDuration)
+			{
+				duration -= transitionDuration;
+				transitioning = false;
+			}
+		}
+		else if (duration >= functionDuration)
+		{
+			duration -= functionDuration;
+			transitioning = true;
+			transitionFunction = function;
+			PickNextFunction();
+		}
+
+		UpdateFunctionOnGPU();
+	}
+
+	void PickNextFunction()
+	{
+		function = transitionMode == TransitionMode.Cycle ?
+			FunctionLibrary.GetNextFunctionName(function) :
+			FunctionLibrary.GetRandomFunctionNameOtherThan(function);
+	}
+
+	void UpdateFunctionOnGPU()
+	{
+		float step = 2f / resolution;
+		computeShader.SetInt(resolutionId, resolution);
+		computeShader.SetFloat(stepId, step);
+		computeShader.SetFloat(timeId, Time.time);
+		if (transitioning)
+		{
+			computeShader.SetFloat(
+				transitionProgressId,
+				Mathf.SmoothStep(0f, 1f, duration / transitionDuration)
+			);
+		}
+
+		var kernelIndex =
+			(int)function +
+			(int)(transitioning ? transitionFunction : function) *
+			FunctionLibrary.FunctionCount;
+		computeShader.SetBuffer(kernelIndex, positionsId, positionsBuffer);
+
+		int groups = Mathf.CeilToInt(resolution / 8f);
+		computeShader.Dispatch(kernelIndex, groups, groups, 1);
+
+		material.SetBuffer(positionsId, positionsBuffer);
+		material.SetFloat(stepId, step);
+		var bounds = new Bounds(Vector3.zero, Vector3.one * (2f + 2f / resolution));
+		Graphics.DrawMeshInstancedProcedural(
+			mesh, 0, material, bounds, resolution * resolution
+		);
+	}
 }
